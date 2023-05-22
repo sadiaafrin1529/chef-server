@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 require('dotenv').config()
 const port = process.env.PORT || 5000;
@@ -25,12 +25,60 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
+    const toyCollection = client.db('toyDolls').collection('addtoys')
+
+    app.post('/addtoys', async (req, res) => {
+      const addtoys = req.body;
+      const result = await toyCollection.insertOne(addtoys)
+      res.send(result);
+    })
+    app.get('/addtoys', async (req, res) => {
+      const result = await toyCollection.find().limit(20).toArray()
+      res.send(result);
+    })
+
+    app.get('/addtoys/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await toyCollection.findOne(query)
+      res.send(result);
+    })
+
+    app.put('/addtoys/:id', async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) };
+      const edit = req.body;
+      const options = { upsert: true }
+      const editDoc = {
+        $set: {
+          ...edit
+        }
+      }
+      const result = await toyCollection.updateOne(query, editDoc, options)
+      res.send(result)
+    })
+
+
+
+    app.get('/mytoys/:email', async (req, res) => {
+      const query = { email: req.params.email };
+      const result = await toyCollection.find(query).toArray()
+      res.send(result)
+
+    })
+    app.delete('/addtoys/:id',async(req,res)=>{
+      const id = req.params.id 
+      const query = {_id:new ObjectId(id)}
+      const result = await toyCollection.deleteOne(query)
+      res.send(result)
+    })
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
-    await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
@@ -39,8 +87,8 @@ run().catch(console.dir);
 
 
 app.get('/', (req, res) => {
-    res.send('dolls toy is running...')
+  res.send('dolls toy is running...')
 })
 app.listen(port, () => {
-    console.log(`dolls toyserver is running on port : ${port}`)
+  console.log(`dolls toyserver is running on port : ${port}`)
 })
